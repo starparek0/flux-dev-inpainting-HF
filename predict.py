@@ -1,9 +1,8 @@
-from cog import BasePredictor, Input
+from cog import BasePredictor, Input, Path
 from diffusers import StableDiffusionInpaintPipeline
 from safetensors.torch import load_file
 import requests
 import os
-from pathlib import Path
 from typing import Any
 
 
