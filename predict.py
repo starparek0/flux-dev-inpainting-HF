@@ -3,6 +3,9 @@ from diffusers import StableDiffusionInpaintPipeline
 from safetensors.torch import load_file
 import requests
 import os
+from pathlib import Path
+from typing import Any
+
 
 class Predictor(BasePredictor):
     def download_model(self, url: str, cache_dir: str = "models_cache") -> str:
@@ -27,11 +30,11 @@ class Predictor(BasePredictor):
             description="Opis obrazu do wygenerowania",
             default="A beautiful landscape",
         ),
-        image: str = Input(
-            description="Link do obrazu bazowego",
+        image: Path = Input(
+            description="Ścieżka do obrazu wejściowego",
         ),
-        mask: str = Input(
-            description="Link do maski obrazu",
+        mask: Path = Input(
+            description="Ścieżka do maski obrazu",
         ),
         num_inference_steps: int = Input(
             description="Liczba kroków generacji", 
@@ -41,9 +44,10 @@ class Predictor(BasePredictor):
             description="Stopień precyzji podpowiedzi", 
             default=7.5,
         ),
-    ):
+    ) -> Path:
         """
         Wykonuje inpainting przy użyciu dynamicznie pobranego modelu LoRA.
+        Zwraca wygenerowany obraz.
         """
         # Pobranie modelu LoRA
         lora_path = self.download_model(model_url)
@@ -66,4 +70,4 @@ class Predictor(BasePredictor):
         # Zapisz wynik
         output_path = "output.png"
         result.images[0].save(output_path)
-        return {"output": output_path}
+        return Path(output_path)
