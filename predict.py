@@ -1,38 +1,20 @@
-# Prediction interface for Cog ⚙️
-# https://cog.run/python
-
 from cog import BasePredictor, Input
-import requests
-import os
 from diffusers import StableDiffusionInpaintPipeline
 from safetensors.torch import load_file
+import requests
+import os
 
 class Predictor(BasePredictor):
-    def setup(self):
+    def download_model(self, url: str, cache_dir: str = "models_cache") -> str:
         """
-        Setup model initialization (if needed).
+        Pobiera model z podanego URL do lokalnego katalogu cache.
         """
-        print("Model setup complete!")
-
-    def download_model(self, model_url: str, cache_dir="models_cache") -> str:
-        """
-        Download model from a URL to a local cache directory.
-        """
-        if not os.path.exists(cache_dir):
-            os.makedirs(cache_dir)
-        
-        filename = model_url.split("/")[-1]
-        filepath = os.path.join(cache_dir, filename)
-
-        # Download the file only if it doesn't already exist
+        os.makedirs(cache_dir, exist_ok=True)
+        filepath = os.path.join(cache_dir, url.split("/")[-1])
         if not os.path.exists(filepath):
-            print(f"Downloading model from {model_url}...")
-            response = requests.get(model_url)
-            if response.status_code == 200:
-                with open(filepath, "wb") as f:
-                    f.write(response.content)
-            else:
-                raise ValueError(f"Error downloading model: {response.status_code}")
+            print(f"Pobieranie modelu z {url}...")
+            with open(filepath, "wb") as f:
+                f.write(requests.get(url).content)
         return filepath
 
     def predict(
@@ -52,27 +34,27 @@ class Predictor(BasePredictor):
             description="Link do maski obrazu",
         ),
         num_inference_steps: int = Input(
-            description="Liczba kroków (im większa, tym lepsza jakość)",
+            description="Liczba kroków generacji", 
             default=30,
         ),
         guidance_scale: float = Input(
-            description="Stopień precyzji podpowiedzi",
+            description="Stopień precyzji podpowiedzi", 
             default=7.5,
         ),
-    ) -> dict:
+    ):
         """
-        Perform inpainting with the LoRA model and input image.
+        Wykonuje inpainting przy użyciu dynamicznie pobranego modelu LoRA.
         """
-        # Download the LoRA model from the provided URL
+        # Pobranie modelu LoRA
         lora_path = self.download_model(model_url)
 
-        # Load the base inpainting model
+        # Załaduj bazowy model inpainting
         pipeline = StableDiffusionInpaintPipeline.from_pretrained(
             "stabilityai/stable-diffusion-inpainting"
         )
         pipeline.unet.load_attn_procs(load_file(lora_path))
 
-        # Perform inpainting
+        # Wykonaj inpainting
         result = pipeline(
             prompt=prompt,
             image=image,
@@ -81,7 +63,7 @@ class Predictor(BasePredictor):
             guidance_scale=guidance_scale,
         )
 
-        # Save and return the output
+        # Zapisz wynik
         output_path = "output.png"
         result.images[0].save(output_path)
         return {"output": output_path}
